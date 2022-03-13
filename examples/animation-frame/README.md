@@ -11,5 +11,5 @@ await animationFrame()
 div.classList.remove('reset')
 
 animationFrame({repeat: true})
-	.then(() => { /* update your animations */ })
+    .then(() => { /* update your animations */ })
 ```

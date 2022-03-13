@@ -13,5 +13,5 @@ toast.hide()
 pause(60000).then(() => afterAMinute())
 
 pause(1000, {repeat: true})
-	.then(() => { /* update inaccurate clock */ })
+    .then(() => { /* update inaccurate clock */ })
 ```
