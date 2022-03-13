@@ -15,3 +15,10 @@ pause(60000).then(() => afterAMinute())
 pause(1000, {repeat: true})
     .then(() => { /* update inaccurate clock */ })
 ```
+The "undo" essentially just calls `clearTimeout`, stopping it from firing the callback(s). For example,
+```js
+const {undo} = pause.do(1000).then(() => deleteSystem32())
+// oh no! Stop!
+undo()
+// phew...
+```
