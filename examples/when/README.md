@@ -43,12 +43,13 @@ when(element).focuss() // needs two s's to work, so maybe don't
 when(idbRequest).successs() // same issue, but worse
 ```
 
-### .after()
+### `.after()`
 
 The thenable-ness of this syntax wouldn't be nearly as useful without `.after()`. It allows you to to run some code _after_ the `await` statement. The most common use-case for this is image loading. Usually, you'd want to attach the event listener, then set the `src`, and then wait for the `load` event to fire. Doing `await when(image).loads()` would therefore not work, because we'd have to set `src` before attaching the event listener (which means it could already be loaded by the time we attach the event handler). So, for this and similar cases, you get `.after()`. It is only chainable from a `.does` (or a shorthand for it), not a `.then`. Basically, write your `.after` before any `.then`s, like so:
 ```js
-await when(image).loads()
+when(image).loads()
     .after(() => image.src = 'cute-cats.png')
+    .then(() => { /* draw on canvas */ })
 ```
 Note that you can still chain `.then`s from an `.after()`, just not the other way around.
 
@@ -63,3 +64,5 @@ when(card).observes('intersection', {threshold: .5, root: document.body})
 when(myCustomElement).observes('mutation', {childList: true})
     .then(() => { /* do stuff */ })
 ```
+
+Feel free to take a look at the source code, play around with it!

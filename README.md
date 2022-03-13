@@ -29,7 +29,7 @@ The first thing you might notice is the way the event listener is bound - that's
 <a name="function-signatures"></a>
 ## Function signatures
 
-A function defined with `reversible` will retain its original signature. You can even still bind `this` to it. The function returned by `reversible` however also has a `do` property, which exposes a way to undo a call. Parameters work as you'd expect, nothing changes relative to the original function. The return value is where it's at, and it looks like this:
+A function defined with `reversible` will retain its original signature. You can even still bind `this` to it. The function returned by `reversible` however also has a `do` method, which returns a "call object", exposing a way to undo a call. Parameters to `do` work as you'd expect, nothing changes relative to the original function in that respect. The return value is where it's at, and it looks like this:
 ```ts
 interface ReversibleCall<T> {
     result: ReturnType<T>;
@@ -37,7 +37,7 @@ interface ReversibleCall<T> {
     undone: boolean;
 }
 ```
-The `result` property simply contains the return value of the original function. If the reversible is asynchronous, `result` will be a promise. You also get the `undo` function, which takes no arguments, and returns nothing. You may call it more than once, but it will only undo things the first time you call it. Lastly, and probably least importantly, you get a getter `undone` telling you whether the call has been undone or not. Note that destrucuring this property will just give you `false`, because you'd be immediately invoking the getter - keep a reference to the whole object around so you can check it like so:
+The `result` property simply contains the return value of the original function. If the reversible is asynchronous, `result` will be a promise. You also get the `undo` function, which takes no arguments, and returns nothing (i.e. it returns `undefined`). You may call it more than once, but it will only undo things the first time you call it. Lastly, and probably least important, you get a getter `undone` telling you whether the call has been undone or not. Note that destrucuring this property will just give you `false`, because you'd be immediately invoking the getter - keep a reference to the whole object around so you can check it like so:
 ```js
 const foo = reversible(() => {
     // do reversible stuff
