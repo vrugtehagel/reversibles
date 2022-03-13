@@ -24,7 +24,7 @@ const {undo} = attachAutoComplete.do(myInput)
 // and undo it! In this case, it detaches the 'change' event listener.
 undo()
 ```
-The first thing you might notice is the way the event listener is bound - that's not an `addEventListener`, what's up with that? Well, it's the reversible version of `addEventListener`. Or, _a_ reversible version. You can write your own! This `when` implementation can be found in the "examples" folder, if you're interested. Anyway, that brings me to one of the key things about reversible functions; they can only ever undo their _reversible_ dependencies. It's all JavaScript, not magic, and so the `reversible` wrapper cannot see anything you do in your function unless it is also reversible. Yes, you could change the `EventTarget`'s prototype and overwrite `addEventListener` with a reversible version, but I refuse to touch prototypes. It's also probably a lot easier to maintain when there is a clear distinction between reversible functions and vanilla ones, but you're free to do whatever you like :wink:
+The first thing you might notice is the way the event listener is bound - that's not an `addEventListener`, what's up with that? Well, it's the reversible version of `addEventListener`. Or, _a_ reversible version. You can write your own! This `when` implementation can be found in the "library" folder, if you're interested. Anyway, that brings me to one of the key things about reversible functions; they can only ever undo their _reversible_ dependencies. It's all JavaScript, not magic, and so the `reversible` wrapper cannot see anything you do in your function unless it is also reversible. Yes, you could change the `EventTarget`'s prototype and overwrite `addEventListener` with a reversible version, but I refuse to touch prototypes. It's also probably a lot easier to maintain when there is a clear distinction between reversible functions and vanilla ones, but you're free to do whatever you like :wink:
 
 <a name="function-signatures"></a>
 ## Function signatures
@@ -86,4 +86,4 @@ The above helper reversible simply logs a message telling you when it has been r
 
 Note that this also means you _cannot_ write asynchronous helper reversibles; the return value needs to have the `undo` method, and asynchronous functions return a promise (which do not have that). You can still return a promise for the `result`, however. 
 
-For some more examples for how to define helper reversibles, take a look at the "examples" folder! Each example has a readme as well to explain what they do exactly.
+For some more examples for how to define helper reversibles, take a look at the "library" folder! Each example has a readme as well to explain what they do exactly.
