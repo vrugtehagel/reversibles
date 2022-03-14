@@ -1,6 +1,6 @@
 import { reversible } from '../../index.js'
 
-const doEach = (...fns) => (...args) => fns.forEach(fn => fn(...args))
+const doEach = fns => (...args) => fns.forEach(fn => fn(...args))
 
 export default function when(target){
     const does = reversible.define((type, options) => {
