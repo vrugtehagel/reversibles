@@ -6,25 +6,40 @@ export default function when(target){
     const does = reversible.define((type, options) => {
         const handlers = []
         let fn
+        let doNow = false
+        const after = callback => {
+            queueMicrotask(() => queueMicrotask(callback))
+            return {then, timeout}
+        }
+        const timeout = async duration => ({then: resolve => {
+            const stop = result => {
+                clearTimeout(timeoutId)
+                target.removeEventListener(type, stop, options)
+                resolve(result)
+            }
+            const timeoutId = setTimeout(() => stop(null), duration)
+            target.addEventListener(type, stop, options)
+        }})
         const then = handler => {
             handlers.push(handler)
+            if(doNow) handler(null)
             if(handlers.length > 1) return
             fn = doEach(handlers)
             target.addEventListener(type, fn, options)
             return {then}
         }
-        const after = callback => {
-            queueMicrotask(() => queueMicrotask(callback))
-            return {then}
+        const now = () => {
+            doNow = true
+            return {then, after}
         }
         const undo = () => target.removeEventListener(type, fn, options)
-        const result = {then, after}
+        const result = {now, then, after, timeout}
         return {undo, result}
     })
 
     const observes = reversible.define((type, options = {}) => {
         const name = type[0].toUpperCase() + type.slice(1).toLowerCase()
-        const Observer = window[name + 'Observer']
+        const Observer = globalThis[name + 'Observer']
         if(!Observer) return
         let observer
         const handlers = []

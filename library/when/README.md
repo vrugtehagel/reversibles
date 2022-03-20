@@ -45,6 +45,8 @@ when(idbRequest).successs() // same issue, but worse
 
 ### `.after()`
 
+Chains into `then`, `timeout`.
+
 The thenable-ness of this syntax wouldn't be nearly as useful without `.after()`. It allows you to to run some code _after_ the `await` statement. The most common use-case for this is image loading. Usually, you'd want to attach the event listener, then set the `src`, and then wait for the `load` event to fire. Doing `await when(image).loads()` would therefore not work, because we'd have to set `src` before attaching the event listener (which means it could already be loaded by the time we attach the event handler). So, for this and similar cases, you get `.after()`. It is only chainable from a `.does` (or a shorthand for it), not a `.then`. Basically, write your `.after` before any `.then`s, like so:
 ```js
 when(image).loads()
@@ -52,6 +54,27 @@ when(image).loads()
     .then(() => { /* draw on canvas */ })
 ```
 Note that you can still chain `.then`s from an `.after()`, just not the other way around.
+
+### `.timeout()`
+
+Chains into `then`.
+
+Sometimes, you'll want to use the await-able nature of `when` together with an event that may or may not fire. To avoid having unsettled promises lying around, you can chain into a call to `timeout`. Then, the `then` handler will be called either if the event fires, or if the timeout ended - whichever was first. Note that you do not have to specify `{once: true}` when using `timeout`; the even listener will be automatically disconnected once it, or the timeout, fires. For example:
+```js
+await when(collapsible).transitionends().timeout(500)
+collapsible.style.height = 'auto'
+```
+
+### `.now()`
+
+Chains into `then`.
+
+Occasionally you'll have some logic that should both run immediately and on subsequent events of a certain type. For that, you get `.now()`. This takes no argument, and essentially makes sure that any handler you add immediately gets run (synchronously). This doesn't make a whole lot of sense together with `.timeout()` and `.after()`, as in both cases, you're waiting for an event to happen to run a callback, and so this only chains into `.then()`. Note that the `event` object won't be available for the first call when using `.now()`, instead, you'll just get `null`. Example usage:
+```js
+when(element).pointermoves().now().then(() => {
+    updateDragPosition()
+})
+```
 
 ## Observers
 
