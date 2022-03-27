@@ -1,40 +1,49 @@
 import { reversible } from '../../index.js'
 
-const doEach = fns => (...args) => fns.forEach(fn => fn(...args))
+const getChainable = (attach, detach) => {
+    const handlers = []
+    let timeoutId
+    let doNow = false
+    const fn = (...args) => {
+        clearTimeout(timeoutId)
+        for(const handler of handlers)
+            if(handler(...args)) return
+        if(timeoutId) undo()
+    }
+    const after = callback => {
+        queueMicrotask(() => queueMicrotask(callback))
+        return result
+    }
+    const now = () => {
+        doNow = true
+        fn(null)
+        return result
+    }
+    const only = handler => {
+        if(doNow) doNow = handler(null)
+        handlers.push((...args) => !handler(...args))
+        return result
+    }
+    const timeout = duration => {
+        timeoutId ??= setTimeout(() => fn(null), duration)
+        return result
+    }
+    const then = handler => {
+        handlers.push((...args) => { handler(...args) })
+        if(doNow) handler(null)
+        if(handlers.length == 1) attach(fn)
+        return result
+    }
+    const undo = () => detach(fn)
+    const result = {after, now, only, timeout, then}
+    return {undo, result}
+}
 
 export default function when(target){
     const does = reversible.define((type, options) => {
-        const handlers = []
-        let fn
-        let doNow = false
-        const after = callback => {
-            queueMicrotask(() => queueMicrotask(callback))
-            return {then, timeout}
-        }
-        const timeout = async duration => ({then: resolve => {
-            const stop = result => {
-                clearTimeout(timeoutId)
-                target.removeEventListener(type, stop, options)
-                resolve(result)
-            }
-            const timeoutId = setTimeout(() => stop(null), duration)
-            target.addEventListener(type, stop, options)
-        }})
-        const then = handler => {
-            handlers.push(handler)
-            if(doNow) handler(null)
-            if(handlers.length > 1) return
-            fn = doEach(handlers)
-            target.addEventListener(type, fn, options)
-            return {then}
-        }
-        const now = () => {
-            doNow = true
-            return {then, after}
-        }
-        const undo = () => target.removeEventListener(type, fn, options)
-        const result = {now, then, after, timeout}
-        return {undo, result}
+        const attach = fn => target.addEventListener(type, fn, options)
+        const detach = fn => target.removeEventListener(type, fn, options)
+        return getChainable(attach, detach)
     })
 
     const observes = reversible.define((type, options = {}) => {
@@ -42,23 +51,18 @@ export default function when(target){
         const Observer = globalThis[name + 'Observer']
         if(!Observer) return
         let observer
-        const handlers = []
-        const then = handler => {
-            handlers.push(handler)
-            if(handlers.length > 1) return
-            observer = new Observer(doEach(handlers))
+        const attach = fn => {
+            observer = new Observer(fn)
             observer.observe(target, options)
-            return {then}
         }
-        const undo = () => observer.disconnect()
-        const result = {then}
-        return {undo, result}
+        const detach = () => observer.disconnect()
+        return getChainable(attach, detach)
     })
 
     const get = (source, property) => {
         if(property == 'does') return does
         if(property == 'observes' && target instanceof Node) return observes
-        const type = property.replace(/s$/, '')
+        const type = when.keepS ? property : property.replace(/s$/, '')
         return options => does(type, options)
     }
     return new Proxy({does: () => {}, observes: () => {}}, {get})
