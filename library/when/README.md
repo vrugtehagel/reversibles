@@ -51,7 +51,7 @@ when(idbRequest).successs() // same issue, but worse
 ```
 You may also omit the `s`, but the event name will be the thing you write _without the last s_. If there is no "s" at the end, it will be used as-is, but that does mean things like `.focus()` will actually attach an event listener for the `focu` event.
 
-Some of you may think this is stupid and feels hacky. I understand. That's why I'm letting you turn it off. Simply do `when.keepS = true` (capital `S`!) and voila - you can now just write `when(input).focus()` and `when(button).click()`.
+Some of you may think this is stupid and feels hacky. I understand. That's why I'm letting you turn it off. Simply do `when.strict = true` and voila - you can now just write `when(input).focus()` and `when(button).click()`.
 
 ## Observers
 
