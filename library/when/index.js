@@ -2,6 +2,7 @@ import { reversible } from '../../index.js'
 
 const getChainable = (attach, detach) => {
     const handlers = []
+    let attached = false
     let timeoutId
     let doNow = false
     const fn = (...args) => {
@@ -31,7 +32,8 @@ const getChainable = (attach, detach) => {
     const then = handler => {
         handlers.push((...args) => { handler(...args) })
         if(doNow) handler(null)
-        if(handlers.length == 1) attach(fn)
+        if(!attached) attach(fn)
+        attached = true
         return result
     }
     const undo = () => detach(fn)
@@ -46,14 +48,15 @@ export default function when(target){
         return getChainable(attach, detach)
     })
 
-    const observes = reversible.define((type, options = {}) => {
+    const observes = reversible.define((type, ...args) => {
+        if(target) args.unshift(target)
         const name = type[0].toUpperCase() + type.slice(1).toLowerCase()
         const Observer = globalThis[name + 'Observer']
         if(!Observer) return
         let observer
         const attach = fn => {
             observer = new Observer(fn)
-            observer.observe(target, options)
+            observer.observe(...args)
         }
         const detach = () => observer.disconnect()
         return getChainable(attach, detach)
@@ -61,8 +64,8 @@ export default function when(target){
 
     const get = (source, property) => {
         if(property == 'does') return does
-        if(property == 'observes' && target instanceof Node) return observes
-        const type = when.keepS ? property : property.replace(/s$/, '')
+        if(property == 'observes') return observes
+        const type = when.strict ? property : property.replace(/s$/, '')
         return options => does(type, options)
     }
     return new Proxy({does: () => {}, observes: () => {}}, {get})
