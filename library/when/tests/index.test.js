@@ -122,6 +122,18 @@ Deno.test('.now()', () => {
     assert(calls == 2)
     assert(moreCalls == 2)
 })
+Deno.test('.until()', () => {
+    let calls = 0
+    const target = new EventTarget
+    when(target).fires()
+        .then(() => calls++)
+        .until(() => calls == 2)
+    target.dispatchEvent(new CustomEvent('fire'))
+    target.dispatchEvent(new CustomEvent('fire'))
+    assert(calls == 2)
+    target.dispatchEvent(new CustomEvent('fire'))
+    assert(calls == 2)
+})
 Deno.test('chains all the chains', async () => {
     let calls = 0
     let moreCalls = 0
