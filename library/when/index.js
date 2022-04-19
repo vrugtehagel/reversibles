@@ -36,8 +36,12 @@ const getChainable = (attach, detach) => {
         attached = true
         return result
     }
+    const until = handler => {
+        handlers.push((...args) => { handler(...args) && undo() })
+        return result
+    }
     const undo = () => detach(fn)
-    const result = {after, now, only, timeout, then}
+    const result = {after, now, only, timeout, then, until}
     return {undo, result}
 }
 

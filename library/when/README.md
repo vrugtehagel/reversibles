@@ -130,5 +130,14 @@ when(form).submits()
 // the sumbit event.
 ```
 
+### `.until()`
+
+Although this `when` function is reversible, sometimes you want some nicer syntax to run some code and disconnect it at a certain point. For example, listen to keypresses in an input and stop listening when the user presses enter. You can do that like so:
+```js
+when(input).keydown()
+    .then(() => updateValue(input.value))
+    .until(event => event.key == 'Enter')
+```
+This will only detach the event handlers, so it will not stop the chain of `.then()`s like `.only()` does. However it will still respect `.only()`s that come before it, meaning it will not disconnect the event handlers if the `.only()`s in front of it don't pass.
 
 Feel free to take a look at the source code, play around with it!
