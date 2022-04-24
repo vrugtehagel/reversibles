@@ -122,7 +122,7 @@ Deno.test('.now()', () => {
     assert(calls == 2)
     assert(moreCalls == 2)
 })
-Deno.test('.until()', () => {
+Deno.test('.until(callback)', () => {
     let calls = 0
     const target = new EventTarget
     when(target).fires()
@@ -131,6 +131,22 @@ Deno.test('.until()', () => {
     target.dispatchEvent(new CustomEvent('fire'))
     target.dispatchEvent(new CustomEvent('fire'))
     assert(calls == 2)
+    target.dispatchEvent(new CustomEvent('fire'))
+    assert(calls == 2)
+})
+Deno.test('.until(promise)', async () => {
+    let calls = 0
+    let resolve
+    const promise = new Promise(resolver => resolve = resolver)
+    const target = new EventTarget
+    when(target).fires()
+        .then(() => calls++)
+        .until(promise)
+    target.dispatchEvent(new CustomEvent('fire'))
+    target.dispatchEvent(new CustomEvent('fire'))
+    assert(calls == 2)
+    resolve()
+    await promise
     target.dispatchEvent(new CustomEvent('fire'))
     assert(calls == 2)
 })

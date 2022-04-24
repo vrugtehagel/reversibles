@@ -37,7 +37,9 @@ const getChainable = (attach, detach) => {
         return result
     }
     const until = handler => {
-        handlers.push((...args) => { handler(...args) && undo() })
+        if(typeof handler == 'function')
+            handlers.push((...args) => { handler(...args) && undo() })
+        else Promise.resolve(handler).finally(undo)
         return result
     }
     const undo = () => detach(fn)
