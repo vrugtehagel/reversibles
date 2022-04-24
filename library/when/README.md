@@ -140,4 +140,6 @@ when(input).keydown()
 ```
 This will only detach the event handlers, so it will not stop the chain of `.then()`s like `.only()` does. However it will still respect `.only()`s that come before it, meaning it will not disconnect the event handlers if the `.only()`s in front of it don't pass.
 
+`.until()` also allows a promise as argument. In this case, it will asynchronously detach the event listener whenever the promise settles (so alse when it errors). This does not take any `.only()`s into account that come before it, as the event does not necessarily have to fire to trigger the `until()`.
+
 Feel free to take a look at the source code, play around with it!
