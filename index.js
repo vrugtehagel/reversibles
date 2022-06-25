@@ -1,69 +1,72 @@
-let current = null
+let current = {}
 
-const create = (doable, isAsync) => {
-    const fn = isAsync
+export function reversible(definition){
+    const async = definition.constructor.name == 'AsyncFunction'
+    return reversible.define(function(...args){
+        const before = {...current}
+        current = {}
+        const tracking = {}
+        if(async) for(const [key, {bucket}] of Object.entries(registry))
+            current[key] = tracking[key] = bucket()
+        const result = definition.apply(this, args)
+        const call = {result}
+        if(async) for(const [key, {combine}] of Object.entries(registry))
+            call[key] = () => result.then(combine(tracking[key]))
+        else for(const [key, tracking] of Object.entries(current))
+            call[key] = registry[key].combine(tracking)
+        current = before
+        return call
+    }, {async})
+}
+
+reversible.define = (definition, {async} = {}) => {
+    const doable = function(...args){
+        const {result, ...things} = definition.apply(this, args)
+        for(const [key, value] of Object.entries(things))
+            registry[key].add(current[key] ||= registry[key].bucket(), value)
+        return {result, ...things}
+    }
+    const fn = async
         ? async function(...args){ return doable.apply(this, args).result }
         : function(...args){ return doable.apply(this, args).result }
     fn.do = function(...args){
-        const call = this == fn ? doable(...args) : doable.apply(this, args)
-        const {result} = call
-        let undone = false
-        const undo = () => {
-            if(undone) return
-            undone = true
-            call.undo()
-        }
-        return {result, undo, get undone(){ return undone }}
+        const {result, ...things} = this == fn ? doable(...args) : doable.apply(this, args)
+        const transformedCall = {result}
+        const empty = key => registry[key].combine(registry[key].bucket())
+        for(const [key, {transform}] of Object.entries(registry))
+            transformedCall[key] = transform(things[key] || empty(key))
+        return transformedCall
     }
     return fn
 }
 
-const asyncReversible = definition => function(...args){
-    const context = current
-    const dependencies = []
-    current = dependencies
-    const promise = definition.apply(this, args)
-    current = context
-    const result = promise.then(result => {
-        context?.unshift(undo)
-        current = context
-        return result
-    })
-    const undo = () => promise.then(() => dependencies.forEach(undo => undo()))
-    return {result, undo}
-}
-
-const syncReversible = definition => function(...args){
-    const context = current
-    const dependencies = []
-    current = dependencies
-    const result = definition.apply(this, args)
-    const undo = () => dependencies.forEach(undo => undo())
-    context?.unshift(undo)
-    current = context
-    return {result, undo}
-}
-
-reversible.define = definition => create(function(...args){
-    const response = definition.apply(this, args)
-    const {result, undo} = response
-    current?.unshift(undo)
-    return {result, undo}
-})
-
-export function reversible(fn){
-    const isAsync = fn.constructor.name == 'AsyncFunction'
-    return create(isAsync ? asyncReversible(fn) : syncReversible(fn), isAsync)
-}
-
 export async function until(promise){
-    const context = current
-    current = null
-    const then = resolve => {
-        return promise.then(result => {
-            current = context
-            return resolve(result)
-        })
-    }
+    const before = {...current}
+    current = {}
+    const then = resolve => promise.then(result => {
+        current = before
+        return resolve(result)
+    })
     return {then}
+}
+
+reversible.register = (name, registration) => {
+    if(name == 'result') return
+    registry[name] ??= registration
+}
+
+const registry = {
+    undo: {
+        bucket: () => [],
+        add: (bucket, undo) => bucket.unshift(undo),
+        combine: bucket => () => bucket.forEach(undo => undo()),
+        transform: undo => {
+            let undone = false
+            return () => {
+                if(undone) return
+                undone = true
+                undo()
+            }
+        }
+    }
 }

@@ -50,11 +50,11 @@ Deno.test('a helper reversible acts like a normal function', () => {
 Deno.test('a helper reversible can be undone when called with .do()', () => {
     const call = foo.do('arg1', 'arg2')
     assert(call.result == 'arg1,arg2')
-    assert(call.undone == false)
+    // assert(call.undone == false)
     assert(calls.foo.do == 1)
     assert(calls.foo.undo == 0)
     call.undo()
-    assert(call.undone == true)
+    // assert(call.undone == true)
     assert(calls.foo.do == 1)
     assert(calls.foo.undo == 1)
     call.undo()
@@ -72,11 +72,11 @@ Deno.test('a reversible acts like a normal function', () => {
 Deno.test('a reversible can be undone when called with .do()', () => {
     const call = baz.do(1, -1)
     assert(call.result == ',2,')
-    assert(call.undone == false)
+    // assert(call.undone == false)
     assert(calls.foo.do == 1)
     assert(calls.foo.undo == 0)
     call.undo()
-    assert(call.undone == true)
+    // assert(call.undone == true)
     assert(calls.foo.do == 1)
     assert(calls.foo.undo == 1)
     call.undo()
@@ -96,11 +96,11 @@ Deno.test('an async helper reversible can be reversed', async () => {
     const call = bar.do()
     const result = await call.result
     assert(result == 'bonjour')
-    assert(call.undone == false)
+    // assert(call.undone == false)
     assert(calls.bar.do == 1)
     assert(calls.bar.undo == 0)
     call.undo()
-    assert(call.undone == true)
+    // assert(call.undone == true)
     assert(calls.bar.do == 1)
     assert(calls.bar.undo == 1)
     reset()
@@ -113,11 +113,11 @@ Deno.test('an async reversible can be reversed', async () => {
     const call = qux.do()
     const result = await call.result
     assert(result == ',2,')
-    assert(call.undone == false)
+    // assert(call.undone == false)
     assert(calls.foo.do == 1)
     assert(calls.foo.undo == 0)
     await call.undo()
-    assert(call.undone == true)
+    // assert(call.undone == true)
     assert(calls.foo.do == 1)
     assert(calls.foo.undo == 1)
     reset()
@@ -162,4 +162,44 @@ Deno.test('reversibles retain the "this" value', () => {
     assert(context == object)
     object.method.call(23)
     assert(context == 23)
+})
+Deno.test('the registry works', () => {
+    reversible.register('foo', {
+        bucket: () => new Set,
+        add: (bucket, value) => bucket.add(value),
+        combine: bucket => [...bucket].flat(),
+        transform: value => value
+    })
+    const fooer = reversible.define(number => {
+        const foo = number
+        const result = number + 1
+        return {foo, result}
+    })
+    const barrer = reversible(number => {
+        fooer(23)
+        fooer(55)
+        fooer(number ** 2)
+        return number
+    })
+    const bazzer = reversible(number => {
+        barrer(-number)
+        fooer(number / 2)
+    })
+    const quxer = reversible(() => 'qux')
+    const call = barrer.do(5)
+    assert(call.result == 5)
+    assert(Array.isArray(call.foo))
+    assert(call.foo.length == 3)
+    assert([23, 55, 25].every((value, index) => call.foo[index] == value))
+
+    const call2 = bazzer.do(2)
+    assert(call2.result == undefined)
+    assert(Array.isArray(call2.foo))
+    assert(call2.foo.length == 4)
+    assert([23, 55, 4, 1].every((value, index) => call2.foo[index] == value))
+
+    const call3 = quxer.do()
+    assert(call3.result == 'qux')
+    assert(Array.isArray(call3.foo))
+    assert(call3.foo.length == 0)
 })
