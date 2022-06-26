@@ -89,7 +89,7 @@ Note that this also means you _cannot_ write asynchronous helper reversibles; th
 
 For some more examples for how to define helper reversibles, take a look at the "library" folder! Each example has a readme as well to explain what they do exactly.
 
-<a name="reversibles-register"></a>
+<a name="reversible-register"></a>
 ## Register other trackables (advanced)
 
 The underlying mechanism for reversibles relies on tracking dependencies of functions. This script not only provides you with the reversibles themselves, but also that mechanism, allowing you to make functions that track other things as well. This is done by registering a key using `reversibles.register` and a registration object containing some methods that are needed to properly format the tracking. The key you provide will be the key you access on the `call` object returned by calling a function using `.do()`. In the case of reversibles, this key is called `undo`. Anyways, here's an example:
