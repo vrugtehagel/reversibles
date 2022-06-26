@@ -6,6 +6,7 @@ This tiny script provides you with a way to write _reversible functions_. That i
 - [Function signatures](#function-signatures)
 - [Async reversibles (and `until`)](#async-reversibles)
 - [Helper reversibles](#helper-reversibles)
+- [Register other trackables (advanced)](#reversible-register)
 
 <a name="usage"></a>
 ## Usage
@@ -87,3 +88,33 @@ The above helper reversible simply logs a message telling you when it has been r
 Note that this also means you _cannot_ write asynchronous helper reversibles; the return value needs to have the `undo` method, and asynchronous functions return a promise (which do not have that). You can still return a promise for the `result`, however. 
 
 For some more examples for how to define helper reversibles, take a look at the "library" folder! Each example has a readme as well to explain what they do exactly.
+
+<a name="reversibles-register"></a>
+## Register other trackables (advanced)
+
+The underlying mechanism for reversibles relies on tracking dependencies of functions. This script not only provides you with the reversibles themselves, but also that mechanism, allowing you to make functions that track other things as well. This is done by registering a key using `reversibles.register` and a registration object containing some methods that are needed to properly format the tracking. The key you provide will be the key you access on the `call` object returned by calling a function using `.do()`. In the case of reversibles, this key is called `undo`. Anyways, here's an example:
+```js
+reversible.register('foo', {
+    bucket: () => new Set,
+    add: (bucket, value) => bucket.add(value),
+    combine: bucket => [...bucket].flat(),
+    transform: value => value
+})
+```
+These are the 4 methods. All are required, and you should not add additional properties or methods. There are two notions here; the `bucket` and the `value`. The `value` is the thing you eventually access on the `call` object, in the above example, the value, `call.foo`, is an array. The `bucket` is the internal mechanism that's keeping track of the dependencies of a call. In the above example, we've chosen this to be a `Set`, but you could also use an array, or anything else. The `bucket` method in the registration should return an empty bucket. The `add` method then adds a value to the bucket. The `combine` method takes a bucket of values, and returns a value that is an accumulation of all the values in the bucket. In the above example, our `value`s are arrays, and the `combine` method takes a bucket (a `Set`) of `value` arrays, and merges them into a single array. Lastly, the `transform` method allows you to transform a value returned by `reversible.define` into something else. In the case of `reversible` itself, this `transform` method is used to transform the `undo` function into one that can only be called once. Specifically, `reversible` itself is implemented like so:
+```js
+reversible.register('undo', {
+    bucket: () => [],
+    add: (bucket, undo) => bucket.unshift(undo),
+    combine: bucket => () => bucket.forEach(undo => undo()),
+    transform: undo => {
+        let undone = false
+        return () => {
+            if(undone) return
+            undone = true
+            undo()
+        }
+    }
+})
+``` 
+If supporting async functions with your trackable functions as a concern, you should make sure that the `value` for your key is a function. This is because async functions can resolve later, and to make sure all dependencies have been caught, we need to wait until the function has resolved. If the `value` is not a function, there is no way to properly wait for the dependencies to be tracked.
