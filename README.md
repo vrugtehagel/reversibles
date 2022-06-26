@@ -21,9 +21,9 @@ const attachAutoComplete = reversible(input => {
 attachAutoComplete(myInput)
 
 // call it in a reversible way:
-const {undo} = attachAutoComplete.do(myInput)
+const call = attachAutoComplete.do(myInput)
 // and undo it! In this case, it detaches the 'change' event listener.
-undo()
+call.undo()
 ```
 The first thing you might notice is the way the event listener is bound - that's not an `addEventListener`, what's up with that? Well, it's the reversible version of `addEventListener`. Or, _a_ reversible version. You can write your own! This `when` implementation can be found in the "library" folder, if you're interested. Anyway, that brings me to one of the key things about reversible functions; they can only ever undo their _reversible_ dependencies. It's all JavaScript, not magic, and so the `reversible` wrapper cannot see anything you do in your function unless it is also reversible. Yes, you could change the `EventTarget`'s prototype and overwrite `addEventListener` with a reversible version, but I refuse to touch prototypes. It's also probably a lot easier to maintain when there is a clear distinction between reversible functions and vanilla ones, but you're free to do whatever you like :wink:
 
