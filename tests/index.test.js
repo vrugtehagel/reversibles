@@ -159,11 +159,11 @@ Deno.test('the registry works', () => {
     reversible.register('foo', {
         bucket: () => new Set,
         add: (bucket, value) => bucket.add(value),
-        combine: bucket => [...bucket].flat(),
+        combine: bucket => () => [...bucket].flatMap(foo => foo()),
         transform: value => value
     })
     const fooer = reversible.define(number => {
-        const foo = number
+        const foo = () => [number]
         const result = number + 1
         return {foo, result}
     })
@@ -180,18 +180,18 @@ Deno.test('the registry works', () => {
     const quxer = reversible(() => 'qux')
     const call = barrer.do(5)
     assert(call.result == 5)
-    assert(Array.isArray(call.foo))
-    assert(call.foo.length == 3)
-    assert([23, 55, 25].every((value, index) => call.foo[index] == value))
+    assert(Array.isArray(call.foo()))
+    assert(call.foo().length == 3)
+    assert([23, 55, 25].every((value, index) => call.foo()[index] == value))
 
     const call2 = bazzer.do(2)
     assert(call2.result == undefined)
-    assert(Array.isArray(call2.foo))
-    assert(call2.foo.length == 4)
-    assert([23, 55, 4, 1].every((value, index) => call2.foo[index] == value))
+    assert(Array.isArray(call2.foo()))
+    assert(call2.foo().length == 4)
+    assert([23, 55, 4, 1].every((value, index) => call2.foo()[index] == value))
 
     const call3 = quxer.do()
     assert(call3.result == 'qux')
-    assert(Array.isArray(call3.foo))
-    assert(call3.foo.length == 0)
+    assert(Array.isArray(call3.foo()))
+    assert(call3.foo().length == 0)
 })

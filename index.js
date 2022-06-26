@@ -32,9 +32,8 @@ reversible.define = (definition, {async} = {}) => {
     fn.do = function(...args){
         const {result, ...things} = this == fn ? doable(...args) : doable.apply(this, args)
         const transformedCall = {result}
-        const empty = key => registry[key].combine(registry[key].bucket())
-        for(const [key, {transform}] of Object.entries(registry))
-            transformedCall[key] = transform(things[key] || empty(key))
+        for(const [key, {transform, combine, bucket}] of Object.entries(registry))
+            transformedCall[key] = transform(things[key] || combine(bucket()))
         return transformedCall
     }
     return fn

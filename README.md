@@ -94,11 +94,11 @@ The underlying mechanism for reversibles relies on tracking dependencies of func
 reversible.register('foo', {
     bucket: () => new Set,
     add: (bucket, value) => bucket.add(value),
-    combine: bucket => [...bucket].flat(),
+    combine: bucket => () => [...bucket].flatMap(foo => foo()),
     transform: value => value
 })
 ```
-These are the 4 methods. All are required, and you should not add additional properties or methods. There are two notions here; the `bucket` and the `value`. The `value` is the thing you eventually access on the `Call` object, i.e. `call[key]`. In the above example, the value, `call.foo`, is an array. The `bucket` is the internal mechanism that's keeping track of the dependencies of a call. In the above example, we've chosen this to be a `Set`, but you could also use an array, or anything else. The `bucket` method in the registration should return an empty bucket. The `add` method then adds a value to the bucket. The `combine` method takes a bucket of values, and returns a value that is an accumulation of all the values in the bucket. In the above example, our `value`s are arrays, and the `combine` method takes a bucket (a `Set`) of `value` arrays, and merges them into a single array. Lastly, the `transform` method allows you to transform a value returned by `reversible.define` into something else. In our example above, we don't transform anything. In the case of `reversible` itself however, this `transform` method is used to normalize the `undo` function into one that can only be called once, and returns `undefined`. Specifically, `undo` itself is implemented like so:
+These are the 4 methods. All are required, and you should not add additional properties or methods. There are two notions here; the `bucket` and the `value`. The `value` is the function you eventually access on the `Call` object, i.e. `call[key]`. In the above example, the function `call.foo` returns an array. The `bucket` is the internal mechanism that's keeping track of the dependencies of a call. In the above example, we've chosen this to be a `Set`, but you could also use an array, or anything else. The `bucket` method in the registration should return an empty bucket. The `add` method then adds a value to the bucket. The `combine` method takes a bucket of values, and merges them into a single value (as such, it should return a function). In the above example, our `value`s return arrays, and the `combine` method takes a bucket (a `Set`) of `value` functions, and merges the results of those into a single array and returns that. Lastly, the `transform` method allows you to transform a value returned by `reversible.define` into something else. In our example above, we don't transform anything. In the case of `reversible` itself however, this `transform` method is used to normalize the `undo` function into one that can only be called once, and returns `undefined`. Specifically, `undo` itself is implemented like so:
 ```js
 reversible.register('undo', {
     bucket: () => [],
@@ -114,4 +114,4 @@ reversible.register('undo', {
     }
 })
 ``` 
-If supporting async functions with your trackable functions as a concern, you should make sure that the `value` for your key is a function (like in the `undo` case). This is because async functions can resolve later, and to make sure all dependencies have been caught, we need to wait until the function has resolved. If the `value` is not a function, there is no way to properly wait for the dependencies to be tracked right after the function has returned that initial unresolved promise.
+
