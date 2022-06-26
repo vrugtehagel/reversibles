@@ -32,23 +32,20 @@ The first thing you might notice is the way the event listener is bound - that's
 
 A function defined with `reversible` will retain its original signature. You can even still bind `this` to it. The function returned by `reversible` however also has a `do` method, which returns a "call object", exposing a way to undo a call. Parameters to `do` work as you'd expect, nothing changes relative to the original function in that respect. The return value is where it's at, and it looks like this:
 ```ts
-interface ReversibleCall<T> {
+interface Call<T> {
     result: ReturnType<T>;
     undo: () => void;
-    undone: boolean;
 }
 ```
-The `result` property simply contains the return value of the original function. If the reversible is asynchronous, `result` will be a promise. You also get the `undo` function, which takes no arguments, and returns nothing (i.e. it returns `undefined`). You may call it more than once, but it will only undo things the first time you call it. Lastly, and probably least important, you get a getter `undone` telling you whether the call has been undone or not. Note that destrucuring this property will just give you `false`, because you'd be immediately invoking the getter - keep a reference to the whole object around so you can check it like so:
+The `result` property simply contains the return value of the original function. If the reversible is asynchronous, `result` will be a promise. You also get the `undo` function, which takes no arguments, and returns nothing (i.e. it returns `undefined`). You may call it more than once, but it will only undo things the first time you call it. A simple example:
 ```js
 const foo = reversible(() => {
     // do reversible stuff
     return 23
 })
 const call = foo.do()
-console.log(call.undone) // false
 console.log(call.result) // 23
 call.undo()
-console.log(call.undone) // true
 ```
 
 <a name="async-reversibles"></a>
@@ -67,12 +64,12 @@ const uploadFile = reversible(async () => {
 ```
 Note: do _not_ bake `until` into the return value of asynchronous functions, that won't work. Always write `await until(/* expression */)`.
 
-As for undoing an asynchronous function, there's something you should keep in mind. Since you can call `undo` before the function has finished running, and aborting an async reversible early would mean creating a promise that will never be settled, the whole reversible will still be run every time you call it. Even when calling `undo` right away, it will wait for the call to finish running before starting to undo anything. It will however queue the undoing for when the reversible is done, so calling `.undo` early is still fine.
+As for undoing an asynchronous function, there's something you should keep in mind. Since you can call `undo` before the function has finished running, and aborting an async reversible early would mean creating a promise that will never be settled, the whole reversible will still be run every time you call it. Even when calling `undo` right away, it will wait for the original function call to finish running before starting to undo anything. It will however queue the undoing for when the reversible is done, so calling `.undo` early is still fine.
 
 <a name="helper-reversibles"></a>
 ## Helper reversibles
 
-There's an important distinction to make, that I have not brought up yet. You see, reversible functions only ever reverse their dependencies, but they don't know how to undo anything substantial. That's why we need _helper reversibles_, that are, in a way, at the end of the dependency chain. They are the ones that have to explicitly say how they should be undone. The event listening through `when` is an example of this; `when` explicitly defines how an event listener should be taken down. You can write these helper reversibles yourself; in fact, I encourage you to! The way to do this is fairly simple, so let's dive into an example.
+There's an important distinction to make, that I have not brought up yet. You see, reversible functions only ever reverse their dependencies, but they don't know how to undo anything else. That's why we need _helper reversibles_, that are, in a way, at the end of the dependency chain. They are the ones that have to explicitly say how they should be undone. The event listening through `when` is an example of this; `when` explicitly defines how an event listener should be taken down. You can write these helper reversibles yourself; in fact, I encourage you to! The way to do this is fairly simple, so let's dive into an example.
 ```js
 const test = reversible.define(number => {
     console.log(`Test ${number} ran!`)
@@ -92,7 +89,7 @@ For some more examples for how to define helper reversibles, take a look at the 
 <a name="reversible-register"></a>
 ## Register other trackables (advanced)
 
-The underlying mechanism for reversibles relies on tracking dependencies of functions. This script not only provides you with the reversibles themselves, but also that mechanism, allowing you to make functions that track other things as well. This is done by registering a key using `reversibles.register` and a registration object containing some methods that are needed to properly format the tracking. The key you provide will be the key you access on the `call` object returned by calling a function using `.do()`. In the case of reversibles, this key is called `undo`. Anyways, here's an example:
+The underlying mechanism for reversibles relies on tracking dependencies of functions. This script not only provides you with the reversibles themselves, but also that mechanism, allowing you to make functions that track other things as well. This is done by registering a key to be used on the `Call` object using `reversibles.register`. It takes that key as a first argument, and a registration object containing some methods that are needed to properly format the tracking as second argument. That key you provide will be the key you access on the `Call` object returned by calling a function using `.do()`. In the case of reversibles, that's `'undo'`. Anyways, here's an example:
 ```js
 reversible.register('foo', {
     bucket: () => new Set,
@@ -101,7 +98,7 @@ reversible.register('foo', {
     transform: value => value
 })
 ```
-These are the 4 methods. All are required, and you should not add additional properties or methods. There are two notions here; the `bucket` and the `value`. The `value` is the thing you eventually access on the `call` object, in the above example, the value, `call.foo`, is an array. The `bucket` is the internal mechanism that's keeping track of the dependencies of a call. In the above example, we've chosen this to be a `Set`, but you could also use an array, or anything else. The `bucket` method in the registration should return an empty bucket. The `add` method then adds a value to the bucket. The `combine` method takes a bucket of values, and returns a value that is an accumulation of all the values in the bucket. In the above example, our `value`s are arrays, and the `combine` method takes a bucket (a `Set`) of `value` arrays, and merges them into a single array. Lastly, the `transform` method allows you to transform a value returned by `reversible.define` into something else. In the case of `reversible` itself, this `transform` method is used to transform the `undo` function into one that can only be called once. Specifically, `reversible` itself is implemented like so:
+These are the 4 methods. All are required, and you should not add additional properties or methods. There are two notions here; the `bucket` and the `value`. The `value` is the thing you eventually access on the `Call` object, i.e. `call[key]`. In the above example, the value, `call.foo`, is an array. The `bucket` is the internal mechanism that's keeping track of the dependencies of a call. In the above example, we've chosen this to be a `Set`, but you could also use an array, or anything else. The `bucket` method in the registration should return an empty bucket. The `add` method then adds a value to the bucket. The `combine` method takes a bucket of values, and returns a value that is an accumulation of all the values in the bucket. In the above example, our `value`s are arrays, and the `combine` method takes a bucket (a `Set`) of `value` arrays, and merges them into a single array. Lastly, the `transform` method allows you to transform a value returned by `reversible.define` into something else. In our example above, we don't transform anything. In the case of `reversible` itself however, this `transform` method is used to normalize the `undo` function into one that can only be called once, and returns `undefined`. Specifically, `undo` itself is implemented like so:
 ```js
 reversible.register('undo', {
     bucket: () => [],
@@ -117,4 +114,4 @@ reversible.register('undo', {
     }
 })
 ``` 
-If supporting async functions with your trackable functions as a concern, you should make sure that the `value` for your key is a function. This is because async functions can resolve later, and to make sure all dependencies have been caught, we need to wait until the function has resolved. If the `value` is not a function, there is no way to properly wait for the dependencies to be tracked.
+If supporting async functions with your trackable functions as a concern, you should make sure that the `value` for your key is a function (like in the `undo` case). This is because async functions can resolve later, and to make sure all dependencies have been caught, we need to wait until the function has resolved. If the `value` is not a function, there is no way to properly wait for the dependencies to be tracked right after the function has returned that initial unresolved promise.
