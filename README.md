@@ -1,5 +1,8 @@
 # Reversibles
 
+> [!CAUTION]
+> This package has been deprecated, as it is superseded by [Yozo](https://yozo.ooo/); specifically by [`monitor()`](https://yozo.ooo/docs/monitor/), its [type "undo"](https://yozo.ooo/docs/monitor/undo/). The library has been replaced by [`Flow`](https://yozo.ooo/docs/flow/) and specifically Yozo has a very similar [`when()`](https://yozo.ooo/docs/when/). The system in Yozo is both more polished as well as more generic; specifically, Reversibles have issues around how they nest contexts that are fixed in Yozo's `monitor()`.
+
 This tiny script provides you with a way to write _reversible functions_. That is to say, you can call a function, it will keep track of its (reversible) dependencies, give you an `undo` callback and so you can just... Undo everything you did with zero effort.
 
 - [Usage](#usage)
